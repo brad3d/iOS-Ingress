@@ -87,27 +87,33 @@
     [self validateLocationServicesAuthorization];
 
 	CGFloat offset = 32;
-	if ([Utilities isOS7]) { offset += 20; }
+    #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 70000
+	if ([Utilities isOS7]) {
+        offset += 20;
+    }
+    #endif
 	UIStoryboard *storyboard = [UIStoryboard storyboardWithName:@"MainStoryboard_iPhone" bundle:nil];
 	CommViewController *commVC = [storyboard instantiateViewControllerWithIdentifier:@"CommViewController"];
 	commVC.view.frame = CGRectMake(0, self.view.frame.size.height-offset, 320, 393);
 	[self.view addSubview:commVC.view];
 	[self addChildViewController:commVC];
 	
-	locationManager = [SharedLocationManager locationManager];
-    locationManager.delegate = self;
-    locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation;
-	if ([locationManager respondsToSelector:@selector(activityType)]) {
-		locationManager.activityType = CLActivityTypeFitness;
-	}
-	
-	[locationManager startUpdatingLocation];
-	[locationManager startUpdatingHeading];
+//	locationManager = [LocationManager locationManager];
+//    locationManager.delegate = self;
+//    locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation;
+//	if ([locationManager respondsToSelector:@selector(activityType)]) {
+//		locationManager.activityType = CLActivityTypeFitness;
+//	}
+//	
+//	[locationManager startUpdatingLocation];
+//	[locationManager startUpdatingHeading];
+    
+    [[LocationManager sharedInstance] addDelegate:self];
 
 	UIPinchGestureRecognizer *recognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinch:)];
 	[_mapView addGestureRecognizer:recognizer];
 
-#ifdef DEBUG
+#if DEBUG
 #warning Manual scrolling for debug purposes only!
 	UITapGestureRecognizer *mapViewTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(mapTapped:)];
 	mapViewTapGestureRecognizer.numberOfTapsRequired = 2;
@@ -169,7 +175,7 @@
                 
                 NSMutableArray *itemsToCollect = [NSMutableArray array];
                 for (Item *droppedItem in [Item MR_findAllWithPredicate:[NSPredicate predicateWithFormat:@"dropped = YES"]]) {
-                    if ([droppedItem distanceFromCoordinate:_mapView.centerCoordinate] <= 40) {
+                    if ([droppedItem distanceFromCoordinate:_mapView.centerCoordinate] <= SCANNER_RANGE) {
                         [itemsToCollect addObject:droppedItem];
                     }
                 }
@@ -710,7 +716,9 @@
     [self validateLocationServicesAuthorization];
 }
 
-- (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation {
+//- (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation {
+- (void)locationManager:(CLLocationManager *)manager didUpdateLocations:(NSArray *)locations {
+    CLLocation *newLocation = [locations lastObject];
 	[_mapView setCenterCoordinate:newLocation.coordinate animated:!firstLocationUpdate];
 	if (firstLocationUpdate) firstLocationUpdate = NO;
 }
@@ -826,10 +834,9 @@
 - (void)mapView:(MKMapView *)mapView regionDidChangeAnimated:(BOOL)animated {
 
 	if (mapView.zoomLevel < 15) {
-		if ([Utilities isOS7]) {
-			#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 70000
-                [mapView setCenterCoordinate:mapView.centerCoordinate zoomLevel:15 animated:NO];
-
+//		if ([Utilities isOS7]) {
+//            [mapView setCenterCoordinate:mapView.centerCoordinate zoomLevel:15 animated:NO];
+//#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 70000
 //				MKMapCamera *camera = [MKMapCamera camera];
 //				camera.centerCoordinate = mapView.centerCoordinate;
 //				camera.heading = 0;
@@ -837,10 +844,10 @@
 //				camera.altitude = 50;
 //				NSLog(@"camera: %@", camera);
 //				[mapView setCamera:camera animated:NO];
-			#endif
-		} else {
+//#endif
+//		} else {
 			[mapView setCenterCoordinate:mapView.centerCoordinate zoomLevel:15 animated:NO];
-		}
+//		}
 		return;
     }
 
@@ -853,7 +860,7 @@
 	if (energy < maxEnergy) {
 		[[[API sharedInstance] energyToCollect] removeAllObjects];
 		for (EnergyGlob *xm in [EnergyGlob MR_findAll]) {
-			if ([xm distanceFromCoordinate:_mapView.centerCoordinate] <= 40) {
+			if ([xm distanceFromCoordinate:_mapView.centerCoordinate] <= SCANNER_RANGE) {
 				[[[API sharedInstance] energyToCollect] addObject:xm];
 				collecting += xm.amount;
 			}
@@ -883,7 +890,7 @@
 	if ([view.annotation isKindOfClass:[Portal class]]) {
 		currentPortal = (Portal *)view.annotation;
 		if (self.virusToUse) {
-			if ([currentPortal distanceFromCoordinate:_mapView.centerCoordinate] <= 40) {
+			if ([currentPortal distanceFromCoordinate:_mapView.centerCoordinate] <= SCANNER_RANGE) {
 				if ([[NSUserDefaults standardUserDefaults] boolForKey:DeviceSoundToggleEffects]) {
 					[[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
 				}
@@ -896,7 +903,7 @@
 			[self performSegueWithIdentifier:@"PortalDetailSegue" sender:self];
 		}
 	} else if ([view.annotation isKindOfClass:[Item class]]) {
-		if ([(Item *)(view.annotation) distanceFromCoordinate:_mapView.centerCoordinate] <= 40) {
+		if ([(Item *)(view.annotation) distanceFromCoordinate:_mapView.centerCoordinate] <= SCANNER_RANGE) {
             if ([[NSUserDefaults standardUserDefaults] boolForKey:DeviceSoundToggleEffects]) {
                 [[SoundManager sharedManager] playSound:@"Sound/sfx_ui_success.aif"];
             }

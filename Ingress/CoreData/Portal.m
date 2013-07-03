@@ -48,6 +48,10 @@
 	return [self distanceFromCoordinate:[LocationManager sharedInstance].playerLocation.coordinate] <= SCANNER_RANGE;
 }
 
+- (int)playerdistance {
+	return [self distanceFromCoordinate:[LocationManager sharedInstance].playerLocation.coordinate];
+}
+
 - (NSString *)title {
 	return self.description;
 }

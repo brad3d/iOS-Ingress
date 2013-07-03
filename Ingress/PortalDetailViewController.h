@@ -22,6 +22,8 @@
 	MDCParallaxView *infoContainerView;
 	PortalInfoViewController *portalInfoVC;
 	PortalUpgradeViewController *portalUpgradeVC;
+    
+    __weak IBOutlet UILabel *distance;
 
 }
 

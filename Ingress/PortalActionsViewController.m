@@ -12,6 +12,9 @@
 #import "NSShadow+Initilalizer.h"
 #import "LocationManager.h"
 
+static BOOL HackInProgress = NO;
+static NSString *PortalName = @" ";
+
 @implementation PortalActionsViewController {
 	PortalKey *_portalKey;
 }
@@ -31,6 +34,9 @@
 	linkButton.titleLabel.font = [UIFont fontWithName:[[[UILabel appearance] font] fontName] size:16];
 
 	self.imageView.image = [UIImage imageNamed:@"missing_image"];
+    //NSLog(@"Hack to NO 1");
+    //HackInProgress = NO;
+
     
     [[LocationManager sharedInstance] addDelegate:self];
     
@@ -120,8 +126,10 @@
 	infoLabel2.attributedText = attrStr;
 
 	////////////////////////////
-
+    PortalName = self.portal.name;
+    HackInProgress = NO;
 	[self refreshActions];
+    
 }
 
 - (void)refreshActions {
@@ -131,6 +139,24 @@
     // ------------------------------------------
     
     if (self.portal.isInPlayerRange) {
+        //[self hack:sender];
+        //NSLog("%@", self.videoMetaData");
+        //NSLog( @"in range" );
+        NSLog(@"%@", self.portal.name);
+        if (PortalName == self.portal.name){
+        //NSLog( @"NAME CHECK PASSED" );
+        if ([[NSUserDefaults standardUserDefaults] boolForKey:DriveMode]) {
+            if (HackInProgress == NO){
+                //NSLog( @"###########    DO HACK" );
+                HackInProgress = YES;
+                [self hack:nil];
+            
+            }
+            //if we are in range then just hack it already}
+        }
+        }
+        
+
         hackButton.enabled = YES;
         hackButton.errorString = nil;
         
@@ -150,6 +176,8 @@
         }
         
     } else {
+        NSLog( @"not in range" );
+        NSLog(@"%@", self.portal.name);
         hackButton.enabled = NO;
         hackButton.errorString = @"Out of Range";
         linkButton.enabled = NO;
@@ -224,7 +252,6 @@
 	[[API sharedInstance] hackPortal:self.portal completionHandler:^(NSString *errorStr, NSArray *acquiredItems, int secondsRemaining) {
 		
 		[HUD hide:YES];
-		
 		if (errorStr) {
             
             NSMutableArray *sounds = [NSMutableArray array];
@@ -377,6 +404,7 @@
 				[[AppDelegate instance].window addSubview:HUD];
 				[HUD show:YES];
 				[HUD hide:YES afterDelay:HUD_DELAY_TIME];
+            
 				
 			} else {
 
@@ -395,6 +423,7 @@
 				[[AppDelegate instance].window addSubview:HUD];
 				[HUD show:YES];
 				[HUD hide:YES afterDelay:HUD_DELAY_TIME];
+             
 				
 			}
 		}

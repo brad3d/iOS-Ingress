@@ -39,7 +39,10 @@
 	if (![[NSUserDefaults standardUserDefaults] objectForKey:MilesOrKM]) {
 		[[NSUserDefaults standardUserDefaults] setBool:YES forKey:MilesOrKM];
 	}
-
+	if (![[NSUserDefaults standardUserDefaults] objectForKey:DriveMode]) {
+		[[NSUserDefaults standardUserDefaults] setBool:YES forKey:DriveMode];
+	}
+    
 	[[NSUserDefaults standardUserDefaults] synchronize];
 	
 }

@@ -20,6 +20,8 @@ FOUNDATION_EXPORT NSString *const DeviceSoundToggleEffects;
 FOUNDATION_EXPORT NSString *const DeviceSoundToggleSpeech;
 FOUNDATION_EXPORT NSString *const IGMapDayMode;
 FOUNDATION_EXPORT NSString *const MilesOrKM;
+FOUNDATION_EXPORT NSString *const DriveMode;
+
 
 typedef void (^SoundCompletionBlock)(void);
 

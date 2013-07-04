@@ -12,6 +12,9 @@
 #import "NSShadow+Initilalizer.h"
 #import "LocationManager.h"
 
+static BOOL HackInProgress = NO;
+static NSString *PortalName = @" ";
+
 @implementation PortalActionsViewController {
 	PortalKey *_portalKey;
 }
@@ -121,7 +124,8 @@
 	infoLabel2.attributedText = attrStr;
 
 	////////////////////////////
-
+    PortalName = self.portal.name;
+    HackInProgress = NO;
 	[self refreshActions];
 }
 
@@ -133,6 +137,17 @@
     // ------------------------------------------
     
     if (self.portal.isInPlayerRange) {
+        NSLog(@"%@", self.portal.name);
+        if (PortalName == self.portal.name){
+            if ([[NSUserDefaults standardUserDefaults] boolForKey:DriveMode]) {
+                if (HackInProgress == NO){
+                    HackInProgress = YES;
+                    [self hack:nil];
+                    
+                }
+            }
+        }
+        
         hackButton.enabled = YES;
         hackButton.errorString = nil;
         

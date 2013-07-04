@@ -110,6 +110,15 @@
 					}
 					break;
 				}
+				case 8: {
+					if (![[NSUserDefaults standardUserDefaults] boolForKey:DriveMode]) {
+						cell.textLabel.text = @"Enable Driving Mode";
+					} else {
+						cell.textLabel.text = @"Disable Driving Mode";
+					}
+					break;
+				}
+                    
 			}
 
 			break;
@@ -298,6 +307,22 @@
 					}
 					break;
 				}
+				case 8:
+				{
+                    
+					BOOL DriveModeValue = ! [[NSUserDefaults standardUserDefaults] boolForKey:DriveMode];
+					[[NSUserDefaults standardUserDefaults] setBool:DriveModeValue forKey:DriveMode];
+					[[NSUserDefaults standardUserDefaults] synchronize];
+                    
+					UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+					if (!DriveModeValue) {
+						cell.textLabel.text = @"Enable Driving Mode";
+					} else {
+						cell.textLabel.text = @"Disable Driving Mode";
+					}
+					break;
+				}//[NSUserDefaults standardUserDefaults] boolForKey:DriveMode]
+                    
 
 			}
 

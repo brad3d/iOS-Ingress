@@ -42,6 +42,7 @@
 	BOOL firstRefreshProfile;
 	BOOL firstLocationUpdate;
 	BOOL portalDetailSegue;
+	BOOL _clearOverlaysAndAnnotations;
 	MBProgressHUD *locationAllowHUD;
     XMOverlay *_xmOverlay;
     XMOverlayView *_xmOverlayView;
@@ -179,6 +180,7 @@
                 break;
             }
             case 3: {
+				_clearOverlaysAndAnnotations = YES;
             	[self refresh];
             	break;
             }
@@ -244,6 +246,8 @@
     
 	[[NSNotificationCenter defaultCenter] addObserverForName:@"DBUpdatedNotification" object:nil queue:nil usingBlock:^(NSNotification *note) {
         //if ([self isSelectedAndTopmost]) {
+//		[_mapView removeAnnotations:_mapView.annotations];
+//		[_mapView removeOverlays:_mapView.overlays];
 		[self refreshProfile];
         //}
 	}];
@@ -325,6 +329,8 @@
 
 - (void)refresh {
 
+	
+	
 //	if (refreshTimer) {
 //		[refreshTimer invalidate];
 //		refreshTimer = nil;
@@ -335,30 +341,129 @@
 
 	[[API sharedInstance] getObjectsWithCompletionHandler:^{
 
-		[_mapView removeAnnotations:_mapView.annotations];
+		//NSLog(@"getObjectsWithCompletionHandler called.");
 
-		NSMutableArray *overlays = [_mapView.overlays mutableCopy];
-		[overlays removeObject:_xmOverlay];
-		[_mapView removeOverlays:overlays];
+		//NSMutableArray *overlays = [_mapView.overlays mutableCopy];
+		NSMutableDictionary *portals = [[NSMutableDictionary alloc] init];
+		NSMutableDictionary *resonators = [[NSMutableDictionary alloc] init];
+		NSMutableDictionary *polylines = [[NSMutableDictionary alloc] init];
+		NSMutableDictionary *polygons = [[NSMutableDictionary alloc] init];
 
+		NSMutableArray *other_overlays;
+		NSMutableArray *other_annotations;
+		
+		if (_clearOverlaysAndAnnotations) {
+			_clearOverlaysAndAnnotations = NO;
+			
+			//NSLog(@"Clearing all overlays and annotations.");
+			other_overlays = [_mapView.overlays mutableCopy];
+			other_annotations = [_mapView.annotations mutableCopy];
+		} else {
+			//[_mapView removeAnnotations:_mapView.annotations];
+			other_overlays = [[NSMutableArray alloc] init];
+			other_annotations = [[NSMutableArray alloc] init];
+			//NSLog(@"Number of overlays, before remove: %d", [_mapView.overlays count]);
+			//NSLog(@"Number of annotations: %d", [_mapView.annotations count]);
+			
+			for (int i=0; i<[_mapView.overlays count]; i++) {
+				id obj = (id)[_mapView.overlays objectAtIndex:i];
+				if ([obj isKindOfClass:[Portal class]]) {
+					//NSLog(@"Portal overlay, %@", obj);
+					Portal *portal = (Portal *)obj;
+					//NSLog(@"hash: %lu, guid: %@, timestamp: %f", (unsigned long)[portal hash], portal.guid, portal.timestamp);
+					[portals setObject:portal forKey:portal.guid];
+				} else if ([obj isKindOfClass:[MKCircle class]]) {
+					MKCircle *resonator = (MKCircle *)obj;
+					//NSString *resonatorGuid = [NSString stringWithFormat:@"%@-%d", resonator.portal.guid, resonator.slot];
+					//NSLog(@"%@", resonator.title);
+					[resonators setObject:resonator forKey:resonator.title];
+					//				resonatorGuid = nil;
+				} else if ([obj isKindOfClass:[MKPolygon class]]) {
+					MKPolygon *polygon = (MKPolygon *)obj;
+					//NSString *resonatorGuid = [NSString stringWithFormat:@"%@-%d", resonator.portal.guid, resonator.slot];
+					//NSLog(@"%@", resonator.title);
+					[polygons setObject:polygon forKey:polygon.title];
+					//				resonatorGuid = nil;
+				} else if ([obj isKindOfClass:[MKPolyline class]]) {
+					MKPolyline *polyline = (MKPolyline *)obj;
+					//NSString *resonatorGuid = [NSString stringWithFormat:@"%@-%d", resonator.portal.guid, resonator.slot];
+					//NSLog(@"%@", resonator.title);
+					[polylines setObject:polyline forKey:polyline.title];
+					//				resonatorGuid = nil;
+				} else {
+					//NSLog(@"Unknown overlay, %@", obj);
+					[other_overlays addObject:obj];
+				}
+				
+			}
+			
+			for (int i=0; i<[_mapView.annotations count]; i++)
+			{
+				id obj = (id)[_mapView.annotations objectAtIndex:i];
+				if ([obj isKindOfClass:[Portal class]]) {
+					//NSLog(@"Portal overlay, %@", obj);
+					//Portal *portal = (Portal *)obj;
+					//NSLog(@"hash: %lu, guid: %@, timestamp: %f", (unsigned long)[portal hash], portal.guid, portal.timestamp);
+					//[portals setObject:portal forKey:portal.guid];
+				} else {
+					//NSLog(@"Unknown overlay, %@", obj);
+					[other_annotations addObject:obj];
+				}
+			}
+
+		}
+		[other_overlays removeObject:_xmOverlay];
+		[_mapView removeOverlays:other_overlays];
+
+		[_mapView removeAnnotations:other_annotations];
+
+		//NSLog(@"Number of overlays, after remove: %d", [[_mapView overlays] count]);
+		
+		
 		[context performBlock:^{
 
 			NSArray *fetchedFields = [ControlField MR_findAllInContext:context];
 			for (ControlField *controlField in fetchedFields) {
 				if (MKMapRectIntersectsRect(_mapView.visibleMapRect, controlField.polygon.boundingMapRect)) {
-					dispatch_async(dispatch_get_main_queue(), ^{
-						[_mapView addOverlay:controlField.polygon];
-					});
+					MKPolygon *polygon = [polygons objectForKey:controlField.guid];
+					
+					if (polygon) {
+						[polygons removeObjectForKey:controlField.guid];
+					} else {
+						dispatch_async(dispatch_get_main_queue(), ^{
+							MKPolygon *polygon = controlField.polygon;
+							polygon.title = controlField.guid;
+							[_mapView addOverlay:polygon];
+						});
+					}
 				}
 			}
+			//NSLog(@"Removing pologons: %d", [polygons count]);
+			for (MKPolygon *polygon in [polygons allValues]) {
+				[_mapView removeOverlay:polygon];
+			}
+
 
 			NSArray *fetchedLinks = [PortalLink MR_findAllInContext:context];
 			for (PortalLink *portalLink in fetchedLinks) {
 				if (MKMapRectIntersectsRect(_mapView.visibleMapRect, portalLink.polyline.boundingMapRect)) {
-					dispatch_async(dispatch_get_main_queue(), ^{
-						[_mapView addOverlay:portalLink.polyline];
-					});
+					MKPolyline *polyline = [polylines objectForKey:portalLink.guid];
+					
+					if (polyline) {
+						[polylines removeObjectForKey:portalLink.guid];
+					} else {
+
+						dispatch_async(dispatch_get_main_queue(), ^{
+							MKPolyline *polyline = portalLink.polyline;
+							polyline.title = portalLink.guid;
+							[_mapView addOverlay:polyline];
+						});
+					}
 				}
+			}
+			//NSLog(@"Removing polylines: %d", [polylines count]);
+			for (MKPolyline *polyline in [polylines allValues]) {
+				[_mapView removeOverlay:polyline];
 			}
 
 			NSArray *fetchedItems = [Item MR_findAllWithPredicate:[NSPredicate predicateWithFormat:@"dropped = YES"] inContext:context];
@@ -376,12 +481,37 @@
 			for (Portal *portal in fetchedPortals) {
 				//NSLog(@"adding portal to map: %@ (%f, %f)", portal.subtitle, portal.latitude, portal.longitude);
 				if (portal.coordinate.latitude == 0 && portal.coordinate.longitude == 0) { continue; }
-				if (MKMapRectContainsPoint(_mapView.visibleMapRect, MKMapPointForCoordinate(portal.coordinate))) {
-					dispatch_async(dispatch_get_main_queue(), ^{
-						[_mapView addAnnotation:portal];
-						[_mapView addOverlay:portal];
-					});
+				Portal *p = [portals objectForKey:portal.guid];
+				if (p) {
+					if (MKMapRectContainsPoint(_mapView.visibleMapRect, MKMapPointForCoordinate(portal.coordinate))) {
+						if (p.timestamp != portal.timestamp) {
+							//NSLog(@"new guid: %@, timestamp: %f", portal.guid, portal.timestamp);
+
+							//NSLog(@"%lu %lu", (unsigned long)p.hash, (unsigned long)portal.hash);
+							//NSLog(@"%f %f", p.timestamp, portal.timestamp);
+
+							dispatch_async(dispatch_get_main_queue(), ^{
+								[_mapView addAnnotation:portal];
+								[_mapView addOverlay:portal];
+							});
+						} else {
+							[portals removeObjectForKey:portal.guid];
+						}
+					}
+				} else {
+					if (MKMapRectContainsPoint(_mapView.visibleMapRect, MKMapPointForCoordinate(portal.coordinate))) {
+						dispatch_async(dispatch_get_main_queue(), ^{
+							[_mapView addAnnotation:portal];
+							[_mapView addOverlay:portal];
+						});
+					}
 				}
+			}
+			//NSLog(@"portals to be removed: %d", [portals count]);
+			for (Portal *p in [portals allValues]) {
+				//NSLog(@"Removing portal: %@", p);
+				[_mapView removeOverlay:p];
+				[_mapView removeAnnotation:p];
 			}
 
 			NSArray *fetchedResonators = [DeployedResonator MR_findAllInContext:context];
@@ -389,10 +519,25 @@
 				//NSLog(@"adding resonator to map: %@ (%f, %f)", resonator, resonator.coordinate.latitude, resonator.coordinate.longitude);
 				if (resonator.portal.coordinate.latitude == 0 && resonator.portal.coordinate.longitude == 0) { continue; }
 				if (MKMapRectContainsPoint(_mapView.visibleMapRect, MKMapPointForCoordinate(resonator.portal.coordinate))) {
-					dispatch_async(dispatch_get_main_queue(), ^{
-						[_mapView addOverlay:resonator.circle];
-					});
+					NSString *resonatorGuid = [NSString stringWithFormat:@"%@-%d", resonator.portal.guid, resonator.slot];
+					MKCircle *r = [resonators objectForKey:resonatorGuid];
+
+					if (r) {
+						[resonators removeObjectForKey:resonatorGuid];
+					} else {
+						dispatch_async(dispatch_get_main_queue(), ^{
+							MKCircle *resonatorCircle = resonator.circle;
+							resonatorCircle.title = resonatorGuid;
+							[_mapView addOverlay:resonatorCircle];
+						});
+					}
 				}
+			}
+			
+			//NSLog(@"resonators to be removed: %d", [resonators count]);
+			for (MKCircle *r in [resonators allValues]) {
+				//NSLog(@"Removing resonator: %@", r);
+				[_mapView removeOverlay:r];
 			}
 
 			NSArray *fetchedEnergy = [EnergyGlob MR_findAllInContext:context];
@@ -402,6 +547,8 @@
 			}
 			_xmOverlay.globs = globs;
 
+			//NSLog(@"Number of overlays, at end of refresh: %d", [[_mapView overlays] count]);
+			
 			dispatch_async(dispatch_get_main_queue(), ^{
 				[_xmOverlayView setNeedsDisplayInMapRect:_mapView.visibleMapRect];
 			});
@@ -505,6 +652,7 @@
 	
 	if ([object isKindOfClass:[Portal class]]) {
 		Portal *portal = (Portal *)object;
+		NSLog(@"Adding portal %@", portal.guid);
 		if (![mapGuids containsObject:portal.guid] && MKMapRectContainsPoint(mapRect, MKMapPointForCoordinate(portal.coordinate))) {
 			[mapGuids addObject:portal.guid];
 			dispatch_async(dispatch_get_main_queue(), ^{
@@ -562,6 +710,7 @@
 	
 	if ([object isKindOfClass:[Portal class]]) {
 		Portal *portal = (Portal *)object;
+		NSLog(@"Removing portal %@", portal.guid);
 		[mapGuids removeObject:portal.guid];
 		dispatch_async(dispatch_get_main_queue(), ^{
 			[_mapView removeOverlay:portal];

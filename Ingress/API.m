@@ -833,6 +833,9 @@ NSString *const MilesOrKM = @"MilesOrKM";
 			
 			//NSLog(@"damages: %@", tmpDamages);
 			
+			// Notify the scanner to refresh
+			[[NSNotificationCenter defaultCenter] postNotificationName:@"ScannerRefreshNotification" object:nil];
+			
 			dispatch_async(dispatch_get_main_queue(), ^{
 				handler(nil, tmpDamages);
 			});
@@ -1011,6 +1014,9 @@ NSString *const MilesOrKM = @"MilesOrKM";
 
 		} else {
 			//NSLog(@"deployResonator responseObj: %@", responseObj);
+			
+			// Notify the scanner to refresh
+			[[NSNotificationCenter defaultCenter] postNotificationName:@"ScannerRefreshNotification" object:nil];
 			
 			dispatch_async(dispatch_get_main_queue(), ^{
 				handler(nil);

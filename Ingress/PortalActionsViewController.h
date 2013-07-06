@@ -21,10 +21,12 @@
 	__weak IBOutlet GUIButton *hackButton;
 	__weak IBOutlet GUIButton *rechargeButton;
 	__weak IBOutlet GUIButton *linkButton;
+    
 
 }
 
 @property (nonatomic, strong) Portal *portal;
+@property (nonatomic, strong) UILabel *label;
 @property (nonatomic, strong) UIImageView *imageView;
 
 - (void)refresh;

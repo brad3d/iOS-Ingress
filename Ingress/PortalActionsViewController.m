@@ -20,6 +20,7 @@ static NSString *PortalName = @" ";
 }
 
 @synthesize portal = _portal;
+@synthesize label = _label;
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
@@ -71,6 +72,10 @@ static NSString *PortalName = @" ";
 	dispatch_async(dispatch_get_main_queue(), ^{
 		[self refresh];
 	});
+}
+
+- (void)setdistance:(UILabel *)label {
+	_label = label;
 }
 
 #pragma mark - Refresh
@@ -126,6 +131,19 @@ static NSString *PortalName = @" ";
 	////////////////////////////
     PortalName = self.portal.name;
     HackInProgress = NO;
+    
+    float yardModifier = 1;
+	if (![[NSUserDefaults standardUserDefaults] boolForKey:MilesOrKM]) {
+		yardModifier = 1.0936133;
+	}
+    
+    
+    //if(_portal.playerdistance < SCANNER_RANGE){
+    _label.text =  [NSString stringWithFormat:@"Distance: %.0f%@", _portal.playerdistance * yardModifier,([[NSUserDefaults standardUserDefaults] boolForKey:MilesOrKM] ? @"m" : @"yd")];
+//    }else{
+//        _label.text = @"Out of Range";
+//    }
+
 	[self refreshActions];
 }
 

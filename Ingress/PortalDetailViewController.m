@@ -37,6 +37,7 @@
 	infoContainerView.backgroundInteractionEnabled = NO;
 	infoContainerView.backgroundHeight = viewHeight-64-280;
 	infoContainerView.frame = CGRectMake(0, 0, viewWidth, viewHeight);
+    portalActionsVC.label = self->distance;
 	portalActionsVC.portal = self.portal;
 	portalActionsVC.view.frame = CGRectMake(0, 0, viewWidth, 280);
 	portalActionsVC.imageView = backgroundImageView;
